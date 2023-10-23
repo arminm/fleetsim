@@ -3,7 +3,6 @@ module github.com/arminm/fleetsim
 go 1.21.3
 
 require (
-	github.com/docker/distribution v2.8.3+incompatible
 	github.com/go-p5/p5 v0.13.0
 	github.com/google/uuid v1.0.0
 )
