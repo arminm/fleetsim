@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.server
+    expose:
+      - 8080
+    ports:
+      - 8080:8080
+    env_file:
+      - config.env
+    # depends_on:
+    #   sim:
+    #     condition: service_completed_successfully

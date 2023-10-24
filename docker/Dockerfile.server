@@ -1,0 +1,9 @@
+FROM golang:1.21.3 AS buildstage
+WORKDIR /fleetsim
+COPY . .
+RUN CGO_ENABLED=0 go build -a -o server ./cmd/server/main.go
+
+FROM alpine:latest  
+WORKDIR /root
+COPY --from=buildstage /fleetsim/server .
+CMD ["./server"]
