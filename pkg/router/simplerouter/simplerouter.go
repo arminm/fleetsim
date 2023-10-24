@@ -1,4 +1,4 @@
-package world
+package simplerouter
 
 import (
 	"image/color"
@@ -9,26 +9,52 @@ import (
 )
 
 type Config struct {
+	Size int
 }
 
-type World struct {
+type SimplerRouter struct {
 	config      *Config
 	RoadNetwork *Graph
 }
 
-func NewWorld(config *Config) *World {
-	w := &World{
-		config:      config,
+const (
+	defaultLaneLength = 1
+)
+
+func NewSimpleRouter(config *Config) *SimplerRouter {
+	sr := &SimplerRouter{
+		config:      &Config{},
 		RoadNetwork: NewGraph(),
 	}
-
-	return w
+	nodeGrid := [][]*Vertex{}
+	scaleFactor := 100
+	gridSize := config.Size / scaleFactor
+	padding := scaleFactor / 2
+	for i := 0; i < gridSize; i++ {
+		row := []*Vertex{}
+		nodeGrid = append(nodeGrid, row)
+		for j := 0; j < gridSize; j++ {
+			v := sr.RoadNetwork.NewVertex(common.Position{
+				Latitude:  float64(padding + i*scaleFactor),
+				Longitude: float64(padding + j*scaleFactor),
+				Heading:   0,
+			})
+			nodeGrid[i] = append(nodeGrid[i], v)
+			if i > 0 {
+				v.AddLaneToVertex(nodeGrid[i-1][j], defaultLaneLength)
+			}
+			if j > 0 {
+				v.AddLaneToVertex(nodeGrid[i][j-1], defaultLaneLength)
+			}
+		}
+	}
+	return sr
 }
 
-func (sw *World) GetRoute(from, to common.Position) (*router.Route, error) {
-	fromVertex := sw.findClosestVertex(from)
-	toVertex := sw.findClosestVertex(to)
-	path, err := sw.findPath(fromVertex, toVertex)
+func (sr *SimplerRouter) GetRoute(from, to common.Position) (*router.Route, error) {
+	fromVertex := sr.findClosestVertex(from)
+	toVertex := sr.findClosestVertex(to)
+	path, err := sr.findPath(fromVertex, toVertex)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +68,10 @@ func (sw *World) GetRoute(from, to common.Position) (*router.Route, error) {
 	}, nil
 }
 
-func (sw *World) findClosestVertex(pos common.Position) *Vertex {
+func (sr *SimplerRouter) findClosestVertex(pos common.Position) *Vertex {
 	var minDistance float64
 	var closestVertex *Vertex
-	for _, ver := range sw.RoadNetwork.Vertices {
+	for _, ver := range sr.RoadNetwork.Vertices {
 		if closestVertex == nil {
 			closestVertex = ver
 			minDistance = common.Distance(pos, ver.Position)
@@ -62,7 +88,7 @@ func (sw *World) findClosestVertex(pos common.Position) *Vertex {
 	return closestVertex
 }
 
-func (sw *World) findPath(start, end *Vertex) ([]*Vertex, error) {
+func (sr *SimplerRouter) findPath(start, end *Vertex) ([]*Vertex, error) {
 	visited := map[*Vertex]bool{}
 	queue := [][]*Vertex{{start}}
 	for len(queue) > 0 {
@@ -87,12 +113,12 @@ func (sw *World) findPath(start, end *Vertex) ([]*Vertex, error) {
 
 }
 
-func (sw *World) Draw(vis visualizer.Visualizer) {
+func (sr *SimplerRouter) Draw(vis visualizer.Visualizer) {
 	laneColor := &color.RGBA{
 		B: 255, A: 255,
 	}
 	vertexColor := laneColor
-	for _, ver := range sw.RoadNetwork.Vertices {
+	for _, ver := range sr.RoadNetwork.Vertices {
 		x1, y1 := ver.Position.Latitude, ver.Position.Longitude
 		vis.DrawRectangle(x1, y1, 5, 5, 0, vertexColor)
 		for _, lane := range ver.LanesToVertices {
