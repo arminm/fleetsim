@@ -5,12 +5,14 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/arminm/fleetsim/pkg/common"
+	"github.com/arminm/fleetsim/pkg/router"
 	"github.com/arminm/fleetsim/pkg/vehicle"
 	"github.com/arminm/fleetsim/pkg/visualizer"
-	"github.com/arminm/fleetsim/pkg/world"
 )
 
 type Config struct {
+	Router       router.Router
 	VehicleCount int
 	VehicleSize  float64
 	VehicleSpeed int
@@ -20,15 +22,15 @@ type Config struct {
 
 type Simulation struct {
 	config   *Config
-	World    *world.World
+	Router   router.Router
 	Vehicles []*vehicle.Vehicle
 }
 
 func CreateSim(config *Config) *Simulation {
 	sim := &Simulation{config: config}
 
-	// create world
-	sim.World = world.NewSimpleWorld(config.Size)
+	// assign router
+	sim.Router = config.Router
 
 	// add vehicles
 	for i := 0; i < config.VehicleCount; i++ {
@@ -53,25 +55,18 @@ func (sim *Simulation) placeNewVehicle(id string) *vehicle.Vehicle {
 		vehicleSpeed = vehicle.DefaultSpeed
 	}
 
-	randVertex := sim.randomVertex()
+	randPos := sim.randomPosition()
 	veh := vehicle.NewVehicle(&vehicle.Config{
 		ID:       id,
-		Position: randVertex.Position,
+		Position: randPos,
 		Speed:    vehicleSpeed,
 		Size:     vehicleSize,
 	})
 
-	if len(randVertex.LanesToVertices) > 0 {
-		route := []*world.Vertex{}
-		link := randVertex.LanesToVertices[0]
-		for link != nil {
-			route = append(route, link.End)
-			if len(link.End.LanesToVertices) > 0 {
-				link = link.End.LanesToVertices[0]
-			} else {
-				link = nil
-			}
-		}
+	route, err := sim.Router.GetRoute(randPos, sim.randomPosition())
+	if route == nil || err != nil {
+		fmt.Println("failed to generate route")
+	} else {
 		veh.Route = route
 	}
 
@@ -89,6 +84,14 @@ func (sim *Simulation) Start() {
 func (sim *Simulation) tick() {
 	for i := 0; i < len(sim.Vehicles); i++ {
 		veh := sim.Vehicles[i]
+		if len(veh.Route.Path) == 0 {
+			route, err := sim.Router.GetRoute(veh.Position, sim.randomPosition())
+			if route == nil || err != nil {
+				fmt.Println("failed to generate route")
+			} else {
+				veh.Route = route
+			}
+		}
 		veh.TentativeMove()
 		if sim.isOutOfBounds(veh) || sim.hasCollision(veh) {
 			veh.ChangeColor(nil)
@@ -119,13 +122,14 @@ func (sim *Simulation) isOutOfBounds(veh *vehicle.Vehicle) bool {
 	return outOfLatitudeBounds || outOfLongitudeBounds
 }
 
-func (sim *Simulation) randomVertex() *world.Vertex {
-	vertices := sim.World.RoadNetwork.Vertices
-	return vertices[rand.Intn(len(vertices))]
+func (sim *Simulation) randomPosition() common.Position {
+	lat := float64(sim.config.Size/4) + rand.Float64()*float64(sim.config.Size/2)
+	lon := float64(sim.config.Size/4) + rand.Float64()*float64(sim.config.Size/2)
+	return common.Position{Latitude: lat, Longitude: lon}
 }
 
 func (sim *Simulation) Draw(vis visualizer.Visualizer) {
-	sim.World.Draw(vis)
+	sim.Router.Draw(vis)
 	for _, veh := range sim.Vehicles {
 		veh.Draw(vis)
 	}

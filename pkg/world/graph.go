@@ -1,14 +1,18 @@
 package world
 
-import "github.com/arminm/fleetsim/pkg/common"
+import (
+	"fmt"
+
+	"github.com/arminm/fleetsim/pkg/common"
+)
 
 type Graph struct {
-	Vertices []*Vertex
+	Vertices map[string]*Vertex
 }
 
 func NewGraph() *Graph {
 	return &Graph{
-		Vertices: []*Vertex{},
+		Vertices: map[string]*Vertex{},
 	}
 }
 
@@ -36,17 +40,27 @@ func (graph *Graph) NewVertex(pos common.Position) *Vertex {
 }
 
 func (graph *Graph) AddVertex(vertex *Vertex) {
-	graph.Vertices = append(graph.Vertices, vertex)
+	graph.Vertices[vertexKey(vertex)] = vertex
 }
 
-func (vertex *Vertex) AddLaneToVertex(toVertex *Vertex, length float64) *Lane {
-	lane := &Lane{Start: vertex, End: toVertex, Length: length}
-	vertex.LanesToVertices = append(vertex.LanesToVertices, lane)
-	toVertex.LanesFromVertices = append(vertex.LanesFromVertices, lane)
-	return lane
+// adds a 2-way link
+func (vertex *Vertex) AddLaneToVertex(toVertex *Vertex, length float64) {
+	// way to
+	laneTo := &Lane{Start: vertex, End: toVertex, Length: length}
+	vertex.LanesToVertices = append(vertex.LanesToVertices, laneTo)
+	toVertex.LanesFromVertices = append(toVertex.LanesFromVertices, laneTo)
+
+	// way back
+	laneBack := &Lane{Start: toVertex, End: vertex, Length: length}
+	vertex.LanesFromVertices = append(vertex.LanesFromVertices, laneBack)
+	toVertex.LanesToVertices = append(toVertex.LanesToVertices, laneBack)
 }
 
 func (vertex *Vertex) RemoveLane(lane *Lane) {
 	vertex.LanesToVertices = common.RemoveItemByReference(vertex.LanesToVertices, lane)
 	vertex.LanesFromVertices = common.RemoveItemByReference(vertex.LanesFromVertices, lane)
+}
+
+func vertexKey(vertex *Vertex) string {
+	return fmt.Sprintf("%f,%f", vertex.Position.Latitude, vertex.Position.Longitude)
 }

@@ -6,8 +6,8 @@ import (
 	"math/rand"
 
 	"github.com/arminm/fleetsim/pkg/common"
+	"github.com/arminm/fleetsim/pkg/router"
 	"github.com/arminm/fleetsim/pkg/visualizer"
-	"github.com/arminm/fleetsim/pkg/world"
 	"github.com/google/uuid"
 )
 
@@ -29,7 +29,7 @@ type Vehicle struct {
 	Speed int
 	Size  float64
 
-	Route []*world.Vertex
+	Route *router.Route
 
 	Color color.Color
 }
@@ -85,9 +85,9 @@ func NewVehicle(config *Config) *Vehicle {
 
 func (veh *Vehicle) TentativeMove() {
 	veh.prevPosition = veh.Position
-	if len(veh.Route) > 0 {
+	if len(veh.Route.Path) > 0 {
 		x1, y1 := veh.Position.Latitude, veh.Position.Longitude
-		dest := veh.Route[0].Position
+		dest := veh.Route.Path[0]
 		x2, y2 := dest.Latitude, dest.Longitude
 		dx, dy := (x2 - x1), (y2 - y1)
 		if math.Abs(dx) > float64(veh.Speed) {
@@ -106,7 +106,7 @@ func (veh *Vehicle) GoBack() {
 }
 
 func (veh *Vehicle) CommitMove() {
-	if len(veh.Route) > 0 {
+	if len(veh.Route.Path) > 0 {
 		veh.updateRoute()
 	}
 	veh.updateHeading()
@@ -127,15 +127,12 @@ func (veh *Vehicle) ChangeColor(col color.Color) {
 
 func (veh *Vehicle) Draw(vis visualizer.Visualizer) {
 	// route
-	routeColor := color.RGBA{
-		G: 255,
-		A: 255,
-	}
-	if len(veh.Route) > 0 {
+	routeColor := veh.Color
+	if len(veh.Route.Path) > 0 {
 		x1, y1 := veh.Position.Latitude, veh.Position.Longitude
-		for i := 0; i < len(veh.Route); i++ {
-			nextVertex := veh.Route[i]
-			x2, y2 := nextVertex.Position.Latitude, nextVertex.Position.Longitude
+		for i := 0; i < len(veh.Route.Path); i++ {
+			nextPosition := veh.Route.Path[i]
+			x2, y2 := nextPosition.Latitude, nextPosition.Longitude
 			vis.DrawLine(x1, y1, x2, y2, routeColor)
 			x1, y1 = x2, y2
 		}
@@ -163,11 +160,11 @@ func (veh *Vehicle) updateHeading() {
 
 func (veh *Vehicle) updateRoute() {
 	maxDistanceForArrival := 1. // units
-	if common.PositionsWithinDistance(veh.Position, veh.Route[0].Position, maxDistanceForArrival) {
-		if len(veh.Route) > 1 {
-			veh.Route = veh.Route[1:]
+	if common.PositionsWithinDistance(veh.Position, veh.Route.Path[0], maxDistanceForArrival) {
+		if len(veh.Route.Path) > 1 {
+			veh.Route.Path = veh.Route.Path[1:]
 		} else {
-			veh.Route = []*world.Vertex{}
+			veh.Route.Path = []common.Position{}
 		}
 	}
 }
