@@ -6,12 +6,16 @@ Simulating a fleet of cars
 
 ### Setup
 
-1. Download and install the [latest version of Go](https://go.dev/)
-2. Install Docker
-2. [Install Protocol Buffer compiler](https://grpc.io/docs/protoc-installation/)
-    - if you have Homebrew, you can install with `brew install protobuf` (this can take a while!)
-    - Install the Go plugins for protocol compiler
-    - **NOTE**: you need to set `export PATH="$PATH:$(go env GOPATH)/bin"` in your shell
-3. 
+1. Download and install the [latest version of Go](https://go.dev)
+2. Install [Docker](https://docs.docker.com/engine/install)
+3. Run `make build`
 
+### Run Server
 
+You can run the server with:
+
+> $ make dc-up
+
+and then use the CLI tool to test some calls:
+
+> $ make cli
