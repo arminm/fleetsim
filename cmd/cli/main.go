@@ -58,13 +58,17 @@ func main() {
 }
 
 func sayHello() {
+	fmt.Printf("What's your name? ")
+	name := []byte{}
+	fmt.Scanln(&name)
+
 	conn := getGrpcClient()
 	defer conn.Close()
 	c := pb.NewGreeterClient(conn)
 	// Contact the server and print out its response.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: "armin"})
+	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: string(name)})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
